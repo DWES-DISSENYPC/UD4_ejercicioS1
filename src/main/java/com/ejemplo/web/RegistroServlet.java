@@ -19,7 +19,7 @@ import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import java.io.IOException;
 
-@MultipartConfig
+@MultipartConfig // Necesario para procesar ficheros subidos
 @WebServlet("/registro")
 public class RegistroServlet extends HttpServlet {
 
@@ -37,32 +37,40 @@ public class RegistroServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         req.setCharacterEncoding("UTF-8");
 
+        // Creamos el objeto Usuario para pasarlo a la vista
         Usuario u = new Usuario(
                 req.getParameter("usuario"),
-                req.getParameter("contraseña")
-               
-        );
+                req.getParameter("contraseña"));
 
         IWebExchange exchange = this.app.buildExchange(req, resp);
         WebContext ctx = new WebContext(exchange, exchange.getLocale());
-        ctx.setVariable("usuario", u);
- 
-        String mensaje = "";
-        
-        boolean fichero_ok = GestionFicherosService.toMayus(req); 
 
-        mensaje = fichero_ok ? "Se ha enviado el fichero correctamente" : "Error con el fichero";
+        // Asignamos la variable 'currentUser' al contexto de Thymeleaf para evitar
+        // conflictos OGNL
+        ctx.setVariable("currentUser", u);
+
+        String mensaje = "";
+
+        // Llamada al método de validación único. Esperamos la extensión ".txt".
+        boolean fichero_ok = GestionFicherosService.validarFichero(req, ".txt");
+
+        mensaje = fichero_ok
+                ? "¡Registro y Fichero Procesado Correctamente!"
+                : "Error de Validación/Procesamiento del Fichero. Consulta la consola del servidor para detalles.";
+
         ctx.setVariable("msj", mensaje);
 
-        if(fichero_ok) this.view.render("registro-ok", ctx, resp);
-        else           this.view.render("registro-not-ok", ctx, resp);
-        
+        if (fichero_ok) {
+            this.view.render("registro-ok", ctx, resp);
+        } else {
+            this.view.render("registro-not-ok", ctx, resp);
+        }
+
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {        
-        // Acceso directo: redirigimos al formulario
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException { 
         resp.sendRedirect(req.getContextPath() + "/index.html");
     }
-    
+
 }
